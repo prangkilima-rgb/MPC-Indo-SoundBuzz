@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. The "Master Gate" (Global Safety Net)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /appData/{dataId} {
+      // Allow reading app data (tracks, schedule) to anyone for the music community
+      // But in a real app, secrets like adminPin and user passwords should be separated
+      allow read: if true;
+      
+      // Allow write temporarily for the prototype since it does not use Firebase Auth
+      allow write: if true;
+    }
+  }
+}
