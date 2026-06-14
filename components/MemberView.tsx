@@ -572,6 +572,16 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             </div>
           </div>
 
+          <div className="mb-8">
+            {accountUsedError && (
+               <div className="mb-4 bg-red-900/40 p-4 rounded-xl border border-red-500/50 flex items-center gap-3">
+                 <AlertCircle size={20} className="text-red-500 shrink-0" />
+                 <p className="text-sm font-bold text-white">{accountUsedError}</p>
+               </div>
+            )}
+            {renderButton()}
+          </div>
+
           {/* Track List */}
           <div className="space-y-3 mb-8">
             {tracks.length === 0 ? (
@@ -613,14 +623,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                 })
             )}
           </div>
-
-          {accountUsedError && (
-             <div className="mb-4 bg-red-900/40 p-4 rounded-xl border border-red-500/50 flex items-center gap-3">
-               <AlertCircle size={20} className="text-red-500 shrink-0" />
-               <p className="text-sm font-bold text-white">{accountUsedError}</p>
-             </div>
-          )}
-          {renderButton()}
 
         </div>
       )}
