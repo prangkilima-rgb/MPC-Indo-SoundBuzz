@@ -345,7 +345,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         debtCount++;
       }
     }
-    return debtCount;
+    return Math.min(debtCount, 5);
   };
 
   // --- FILTER & STATS LOGIC ---

@@ -76,6 +76,37 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     return Math.round((matchedCount / tracks.length) * 100);
   };
 
+  const calculateDebt = () => {
+    let debtCount = 0;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    // Check last 7 days (excluding today)
+    for (let i = 1; i <= 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const possibleDates = [
+        date.toLocaleDateString(),
+        date.toLocaleDateString('en-US'),
+        date.toLocaleDateString('en-GB'),
+        date.toLocaleDateString('id-ID')
+      ];
+      const checkDayIndex = date.getDay();
+      const dayConfig = weeklySchedule[checkDayIndex];
+      const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
+      
+      let isCheckedIn = false;
+      if (currentUser.checkInHistory) {
+         isCheckedIn = possibleDates.some(pd => currentUser.checkInHistory!.includes(pd));
+      }
+      
+      if (hasTracks && !isCheckedIn) {
+        debtCount++;
+      }
+    }
+    return Math.min(debtCount, 5);
+  };
+
   const handleSync = async () => {
     if (!currentUser.lastFmUsername) {
       setError('No Last.fm username found in profile.');
@@ -241,15 +272,22 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         return;
     }
 
+    let totalPointsEarned = pointsToClaim;
+
     // Regular check-in
     if (!hasCheckedInSelectedDate) {
       await onCheckIn(selectedDateStr, winningAccount); 
+      
+      // If weekend and no debt, this check-in acts as a tabungan point as well
+      if (isWeekendVal && calculateDebt() === 0 && selectedDateStr === new Date().toLocaleDateString()) {
+         totalPointsEarned += 1;
+      }
     }
     
     // Extra points
-    if (pointsToClaim > 0) {
+    if (totalPointsEarned > 0) {
       try {
-        const newBalance = (currentUser.extraPointsBalance || 0) + pointsToClaim;
+        const newBalance = (currentUser.extraPointsBalance || 0) + totalPointsEarned;
         const newClaimedDates = { ...(currentUser.extraPointsClaimedDates || {}) };
         newClaimedDates[selectedDateStr] = pointsAvailable;
 
