@@ -8,8 +8,11 @@ interface AdminReportViewProps {
 }
 
 export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedule }) => {
-  const [reportType, setReportType] = useState<'weekly' | 'monthly'>('weekly');
+  const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Daily selection
+  const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split('T')[0]);
 
   // Weekly selection
   const [selectedWeekEnd, setSelectedWeekEnd] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -18,11 +21,29 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
   const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
 
-  const datesToCheck: { dateStr: string; dayIndex: number; hasTracks: boolean; isPast: boolean; possibleDates: string[] }[] = [];
+  const datesToCheck: { dateStr: string; dayIndex: number; hasTracks: boolean; isPast: boolean; possibleDates: string[]; dateObj: Date }[] = [];
   const today = new Date();
   today.setHours(0,0,0,0);
 
-  if (reportType === 'weekly') {
+  if (reportType === 'daily') {
+    const d = new Date(selectedDay);
+    d.setHours(0,0,0,0);
+    
+    const dateStr = d.toLocaleDateString();
+    const possibleDates = [
+        d.toLocaleDateString(),
+        d.toLocaleDateString('en-US'),
+        d.toLocaleDateString('en-GB'),
+        d.toLocaleDateString('id-ID')
+    ];
+
+    const dayIndex = d.getDay();
+    const dayConfig = schedule[dayIndex];
+    const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
+    const isPast = d.getTime() < today.getTime();
+
+    datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast, possibleDates, dateObj: d });
+  } else if (reportType === 'weekly') {
     const endDate = new Date(selectedWeekEnd);
     endDate.setHours(0,0,0,0);
     
@@ -44,7 +65,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
         const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
         const isPast = d.getTime() < today.getTime();
 
-        datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast, possibleDates });
+        datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast, possibleDates, dateObj: d });
     }
   } else {
     // Monthly report
@@ -71,7 +92,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
         const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
         const isPast = d.getTime() < today.getTime();
 
-        datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast, possibleDates });
+        datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast, possibleDates, dateObj: d });
     }
   }
 
@@ -81,7 +102,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
 
   const getReportForUser = (user: User) => {
     let completedCount = 0;
-    let debtCount = 0; // days that are past, had tracks, and user didn't check in
+    let debtDates: string[] = []; // days that are past, had tracks, and user didn't check in
     
     datesToCheck.forEach(d => {
       let isCheckedIn = false;
@@ -100,15 +121,15 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
         if (isCheckedIn) {
           completedCount++;
         } else if (d.isPast) { // Only count as debt if it's in the past
-           debtCount++;
+           debtDates.push(d.dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }));
         } else if (d.possibleDates.includes(today.toLocaleDateString())) {
            // If it's today, it's missing if not checked in
-           debtCount++;
+           debtDates.push(d.dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }));
         }
       }
     });
 
-    return { completedCount, debtCount };
+    return { completedCount, debtCount: debtDates.length, debtDates };
   };
 
   const filteredUsers = users.filter(user => 
@@ -121,6 +142,12 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
        {/* Controls */}
        <div className="glass p-4 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4 border border-white/10">
           <div className="flex bg-black/40 rounded-xl p-1 border border-white/10 w-full md:w-auto">
+             <button 
+                onClick={() => setReportType('daily')}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${reportType === 'daily' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+             >
+                Harian
+             </button>
              <button 
                 onClick={() => setReportType('weekly')}
                 className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${reportType === 'weekly' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
@@ -136,10 +163,21 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
           </div>
           
           <div className="flex gap-4 w-full md:w-auto items-center">
-             {reportType === 'weekly' ? (
+             {reportType === 'daily' ? (
                 <div className="flex items-center gap-2 text-sm text-gray-300">
                    <CalendarDays size={18} className="text-purple-400" />
                    <span className="hidden sm:inline">Pilih Tanggal:</span>
+                   <input 
+                      type="date"
+                      value={selectedDay}
+                      onChange={(e) => setSelectedDay(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500 text-white"
+                   />
+                </div>
+             ) : reportType === 'weekly' ? (
+                <div className="flex items-center gap-2 text-sm text-gray-300">
+                   <CalendarDays size={18} className="text-purple-400" />
+                   <span className="hidden sm:inline">Akhir Minggu:</span>
                    <input 
                       type="date"
                       value={selectedWeekEnd}
@@ -179,10 +217,12 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
              <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                     <Calendar size={20} className="text-purple-400" /> 
-                    Rekap Report {reportType === 'weekly' ? 'Mingguan' : 'Bulanan'}
+                    Rekap Report {reportType === 'daily' ? 'Harian' : reportType === 'weekly' ? 'Mingguan' : 'Bulanan'}
                 </h3>
                 <p className="text-sm text-gray-400 mt-1">
-                    {reportType === 'weekly' ? (
+                    {reportType === 'daily' ? (
+                       <>Menampilkan rekapitulasi tanggal <span className="text-white font-bold">{new Date(selectedDay).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</span>.</>
+                    ) : reportType === 'weekly' ? (
                        <>Menampilkan rekapitulasi 7 hari terakhir dari tanggal <span className="text-white font-bold">{new Date(selectedWeekEnd).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</span>.</>
                     ) : (
                        <>Menampilkan rekapitulasi selama bulan <span className="text-white font-bold">{new Date(selectedMonth + '-01').toLocaleDateString('id-ID', {month: 'long', year: 'numeric'})}</span>.</>
@@ -208,8 +248,8 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
                                <td colSpan={5} className="text-center py-8 text-gray-500 italic">Tidak ada user.</td>
                            </tr>
                       ) : (
-                          filteredUsers.map(user => {
-                              const { completedCount, debtCount } = getReportForUser(user);
+                           filteredUsers.map(user => {
+                              const { completedCount, debtCount, debtDates } = getReportForUser(user);
                               const rate = targetDaysCount > 0 ? Math.round((completedCount / targetDaysCount) * 100) : 0;
                               return (
                                   <tr key={user.id} className="hover:bg-white/5 transition-colors">
@@ -225,9 +265,14 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
                                       </td>
                                       <td className="p-4 text-center">
                                           {debtCount > 0 ? (
-                                              <span className="text-red-400 font-bold bg-red-900/20 px-2 py-1 rounded-lg border border-red-500/20">
-                                                  {debtCount}
-                                              </span>
+                                              <div className="flex flex-col items-center">
+                                                <span className="text-red-400 font-bold bg-red-900/20 px-2 py-1 rounded-lg border border-red-500/20">
+                                                    {debtCount}
+                                                </span>
+                                                <span className="text-[10px] text-gray-500 mt-1 max-w-[120px] text-center leading-tight">
+                                                    {debtDates.join(', ')}
+                                                </span>
+                                              </div>
                                           ) : (
                                               <span className="text-gray-500">-</span>
                                           )}
