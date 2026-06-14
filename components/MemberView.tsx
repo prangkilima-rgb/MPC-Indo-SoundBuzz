@@ -485,59 +485,76 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         </div>
       </div>
 
-      {/* Sync Button Only (No Inputs) */}
-      <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
-        {isLockedHutang ? (
-            <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-center">
-                <p className="text-red-400 font-bold mb-1">Fitur Pelunasan Terkunci</p>
-                <p className="text-red-300 text-sm">Pending Check-in (Hutang) hanya dapat diselesaikan pada hari Sabtu dan Minggu.</p>
-            </div>
-        ) : (
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={handleSync}
-                disabled={isLoading}
-                className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
-                  isLoading 
-                    ? 'bg-gray-600 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-                }`}
-              >
-                <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-                {isLoading ? 'Syncing...' : 'Check Streams'}
-              </button>
-              
-              {!hasCheckedInSelectedDate && 
-               selectedDateStr !== new Date().toLocaleDateString() && 
-               (currentUser.extraPointsBalance || 0) > 0 && (
-                <button 
-                  onClick={handlePatchAbsence}
-                  className="w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-yellow-600 hover:bg-yellow-500 text-white shadow-[0_0_15px_rgba(202,138,4,0.3)] border border-yellow-500/50"
-                  title="Gunakan 1 tabungan untuk menambal absen hari ini tanpa limit validasi."
-                >
-                  <Trophy size={18} />
-                  Tambal Absen (Gunakan 1 Tabungan)
-                </button>
-              )}
-            </div>
-        )}
-        
-        {error && !isLockedHutang && (
-            <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-2 rounded-lg border border-red-500/20">
-                <AlertCircle size={16} />
-                {error}
-                <button 
-                  onClick={openProfile}
-                  className="ml-auto text-xs underline text-red-300 hover:text-white"
-                >
-                  Edit Profile
-                </button>
-            </div>
-        )}
-        
+      <div className="w-full animate-fade-in-up">
+        {/* Progress Bar */}
+        <div className="glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-gray-400 font-medium">Daily Goal</span>
+            <span className={`text-2xl font-bold ${isComplete ? 'text-neon-green' : 'text-white'}`}>
+              {synced ? progress : 0}%
+            </span>
+          </div>
+          <div className="h-4 w-full bg-black/50 rounded-full overflow-hidden border border-white/5 mb-6">
+            <div 
+              className="h-full bg-gradient-to-r from-neon-green to-emerald-600 transition-all duration-1000 ease-out"
+              style={{ width: `${synced ? progress : 0}%` }}
+            />
+          </div>
+
+          <div className="pt-2">
+            {isLockedHutang ? (
+                <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-center">
+                    <p className="text-red-400 font-bold mb-1">Fitur Pelunasan Terkunci</p>
+                    <p className="text-red-300 text-sm">Pending Check-in (Hutang) hanya dapat diselesaikan pada hari Sabtu dan Minggu.</p>
+                </div>
+            ) : (
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={handleSync}
+                    disabled={isLoading}
+                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                      isLoading 
+                        ? 'bg-gray-600 cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+                    }`}
+                  >
+                    <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
+                    {isLoading ? 'Syncing...' : 'Check Streams'}
+                  </button>
+                  
+                  {!hasCheckedInSelectedDate && 
+                   selectedDateStr !== new Date().toLocaleDateString() && 
+                   (currentUser.extraPointsBalance || 0) > 0 && (
+                    <button 
+                      onClick={handlePatchAbsence}
+                      className="w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-yellow-600 hover:bg-yellow-500 text-white shadow-[0_0_15px_rgba(202,138,4,0.3)] border border-yellow-500/50"
+                      title="Gunakan 1 tabungan untuk menambal absen hari ini tanpa limit validasi."
+                    >
+                      <Trophy size={18} />
+                      Tambal Absen (Gunakan 1 Tabungan)
+                    </button>
+                  )}
+                </div>
+            )}
+            
+            {error && !isLockedHutang && (
+                <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-2 rounded-lg border border-red-500/20">
+                    <AlertCircle size={16} />
+                    {error}
+                    <button 
+                      onClick={openProfile}
+                      className="ml-auto text-xs underline text-red-300 hover:text-white"
+                    >
+                      Edit Profile
+                    </button>
+                </div>
+            )}
+          </div>
+        </div>
+
         {/* Spotify Link Button */}
-        <div className="mt-6 pt-6 border-t border-white/10">
-            <h4 className="text-xs text-gray-400 font-bold uppercase mb-3 flex items-center gap-2">
+        <div className="mb-6">
+            <h4 className="text-xs text-gray-400 font-bold uppercase mb-3 flex items-center gap-2 px-2">
                 <Music size={12} className="text-green-500" /> Target Playlist
             </h4>
 
@@ -552,32 +569,13 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                 <ExternalLink size={16} className="opacity-60 ml-1" />
             </a>
         </div>
-      </div>
 
-      {synced && (
-        <div className="w-full animate-fade-in-up">
-          {/* Progress Bar */}
-          <div className="glass p-6 rounded-2xl mb-6">
-            <div className="flex justify-between items-end mb-2">
-              <span className="text-gray-400 font-medium">Daily Goal</span>
-              <span className={`text-2xl font-bold ${isComplete ? 'text-neon-green' : 'text-white'}`}>
-                {progress}%
-              </span>
-            </div>
-            <div className="h-4 w-full bg-black/50 rounded-full overflow-hidden border border-white/5">
-              <div 
-                className="h-full bg-gradient-to-r from-neon-green to-emerald-600 transition-all duration-1000 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Track List */}
-          <div className="space-y-3 mb-8">
-            {tracks.length === 0 ? (
-                <div className="text-center text-gray-500 py-4">Admin hasn't set any tracks yet.</div>
-            ) : (
-                tracks.map((track) => {
+        {/* Track List */}
+        <div className="space-y-3 mb-8">
+          {tracks.length === 0 ? (
+              <div className="text-center text-gray-500 py-4">Admin hasn't set any tracks yet.</div>
+          ) : (
+              tracks.map((track) => {
                 const matchTime = matchedStatus[track.id];
                 const isListened = !!matchTime;
                 
@@ -623,7 +621,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
           {renderButton()}
 
         </div>
-      )}
 
       {/* Reward Modal */}
       {showReward && (
