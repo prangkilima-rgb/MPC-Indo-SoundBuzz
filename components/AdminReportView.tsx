@@ -158,7 +158,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
                 onClick={() => setReportType('weekly')}
                 className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${reportType === 'weekly' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
              >
-                Mingguan (7 Hari)
+                Mingguan
              </button>
              <button 
                 onClick={() => setReportType('monthly')}
@@ -229,7 +229,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
                     {reportType === 'daily' ? (
                        <>Menampilkan rekapitulasi tanggal <span className="text-white font-bold">{new Date(selectedDay).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</span>.</>
                     ) : reportType === 'weekly' ? (
-                       <>Menampilkan rekapitulasi 7 hari terakhir dari tanggal <span className="text-white font-bold">{new Date(selectedWeekEnd).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</span>.</>
+                       <>Menampilkan rekapitulasi mingguan sampai tanggal <span className="text-white font-bold">{new Date(selectedWeekEnd).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</span>.</>
                     ) : (
                        <>Menampilkan rekapitulasi selama bulan <span className="text-white font-bold">{new Date(selectedMonth + '-01').toLocaleDateString('id-ID', {month: 'long', year: 'numeric'})}</span>.</>
                     )}
