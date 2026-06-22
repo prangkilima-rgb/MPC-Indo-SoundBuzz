@@ -44,13 +44,19 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
 
     datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast, possibleDates, dateObj: d });
   } else if (reportType === 'weekly') {
-    const endDate = new Date(selectedWeekEnd);
-    endDate.setHours(0,0,0,0);
+    const dDate = new Date(selectedWeekEnd);
+    dDate.setHours(0,0,0,0);
     
-    // Look back 7 days ending at endDate
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(endDate);
-        d.setDate(d.getDate() - i);
+    // Find Monday of the selected week
+    const currentDay = dDate.getDay();
+    const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+    const monday = new Date(dDate);
+    monday.setDate(dDate.getDate() + diffToMonday);
+    
+    // Look at Monday to Friday
+    for (let i = 0; i < 5; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
         
         const dateStr = d.toLocaleDateString();
         const possibleDates = [

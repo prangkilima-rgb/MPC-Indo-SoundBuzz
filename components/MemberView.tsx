@@ -81,11 +81,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     const today = new Date();
     today.setHours(0,0,0,0);
     
-    // Check only days in the current week (from Monday up to yesterday)
-    const currentDay = today.getDay(); // 0 is Sunday, 1 is Monday
-    const diffToMonday = currentDay === 0 ? 6 : currentDay - 1;
-    
-    for (let i = 1; i <= diffToMonday; i++) {
+    // Check the last 30 days to accumulate debt from previous weeks
+    for (let i = 1; i <= 30; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       
@@ -110,7 +107,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         debtCount++;
       }
     }
-    return Math.min(debtCount, 5);
+    return debtCount; // Uncapped to let previous weeks accumulate
   };
 
   const handleSync = async () => {
