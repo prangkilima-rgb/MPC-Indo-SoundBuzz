@@ -322,10 +322,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     const today = new Date();
     today.setHours(0,0,0,0);
     
-    // Check last 7 days (excluding today)
-    for (let i = 1; i <= 7; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
+    // Check only days in the current week (from Monday up to yesterday)
+    const currentDay = today.getDay(); // 0 is Sunday, 1 is Monday ... 6 is Saturday
+    const diffToMonday = currentDay === 0 ? 6 : currentDay - 1;
+    
+    for (let i = 1; i <= diffToMonday; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
       const possibleDates = [
         date.toLocaleDateString(),
         date.toLocaleDateString('en-US'),
