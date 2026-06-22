@@ -454,6 +454,31 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     return dates;
   };
 
+  const getWeeklyHistoryForDate = (date: Date) => {
+    const currentDay = date.getDay();
+    const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+    const monday = new Date(date);
+    monday.setDate(date.getDate() + diffToMonday);
+    
+    const days = [];
+    for (let i = 0; i < 5; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        days.push(d);
+    }
+    return days;
+  };
+
+  const isDateCheckedIn = (date: Date) => {
+    const possibleDates = [
+        date.toLocaleDateString(),
+        date.toLocaleDateString('en-US'),
+        date.toLocaleDateString('en-GB'),
+        date.toLocaleDateString('id-ID')
+    ];
+    return possibleDates.some(pd => currentUser.checkInHistory?.includes(pd));
+  };
+  
   return (
     <div className="w-full max-w-md mx-auto p-4 flex flex-col items-center">
       
@@ -520,6 +545,58 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             }}
             className="w-full md:w-auto bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 font-bold"
           />
+        </div>
+      </div>
+
+      {/* Weekly History (Mon-Fri) */}
+      <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
+        <h4 className="text-white font-bold mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
+            <CalendarCheck size={18} className="text-purple-400" /> Weekly Check-in (Mon-Fri)
+        </h4>
+        <div className="flex justify-between items-center bg-black/30 rounded-xl p-2 border border-white/5">
+            {getWeeklyHistoryForDate(selectedDate).map((day, index) => {
+                const checkedIn = isDateCheckedIn(day);
+                // Remove time part for future check
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const compareDay = new Date(day);
+                compareDay.setHours(0,0,0,0);
+                const isFuture = compareDay.getTime() > today.getTime();
+                const dayName = day.toLocaleDateString('en-US', { weekday: 'short' });
+                const isSelected = compareDay.getTime() === selectedDate.getTime();
+                
+                return (
+                    <div 
+                        key={index} 
+                        className={`flex flex-col flex-1 items-center justify-center py-2 mx-1 rounded-lg transition-all cursor-pointer ${
+                            isSelected ? 'bg-white/10 ring-1 ring-white/30' : 'hover:bg-white/5'
+                        }`}
+                        onClick={() => {
+                            if (!isFuture) {
+                                setSelectedDate(day);
+                                setMatchedStatus({});
+                                setSynced(false);
+                            }
+                        }}
+                    >
+                        <span className="text-[10px] text-gray-400 mb-1 uppercase tracking-wider font-bold">{dayName}</span>
+                        {checkedIn ? (
+                            <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center border border-green-500/30">
+                                <CheckCircle2 size={16} />
+                            </div>
+                        ) : isFuture ? (
+                            <div className="w-8 h-8 rounded-full bg-white/5 text-gray-600 flex items-center justify-center">
+                                <Circle size={16} />
+                            </div>
+                        ) : (
+                            <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center border border-red-500/30">
+                                <X size={16} />
+                            </div>
+                        )}
+                        <span className="text-[10px] sm:text-xs font-bold text-gray-400 mt-1">{day.getDate()}</span>
+                    </div>
+                );
+            })}
         </div>
       </div>
 
