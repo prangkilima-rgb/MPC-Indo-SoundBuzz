@@ -88,13 +88,16 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     for (let i = 1; i <= diffToMonday; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
+      
+      const checkDayIndex = date.getDay();
+      if (checkDayIndex === 0 || checkDayIndex === 6) continue; // Skip weekend for debt calculation
+      
       const possibleDates = [
         date.toLocaleDateString(),
         date.toLocaleDateString('en-US'),
         date.toLocaleDateString('en-GB'),
         date.toLocaleDateString('id-ID')
       ];
-      const checkDayIndex = date.getDay();
       const dayConfig = weeklySchedule[checkDayIndex];
       const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
       
@@ -185,31 +188,10 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
           setAccountUsedError(`Batas Keamanan: ${errorMessages.join(" ")} Hubungi Admin.`);
       }
 
-      tracks.forEach(target => {
-          const tArtist = target.artist.toLowerCase();
-          const tTitle = target.title.toLowerCase();
-
-          const foundTracks = recentTracks.filter(recent => {
-             // Only count if from an available account
+      if (tracks.length === 0 && isWeekendVal) {
+          // Verify if they played ANY track on the weekend
+          const validRecentTracks = recentTracks.filter(recent => {
              if (!accountsToUse.includes(recent.listenedBy)) return false;
-
-             const rArtist = recent.artist['#text'].toLowerCase().trim();
-             const rTitle = recent.name.toLowerCase().trim();
-             
-             // 1. Title matching
-             const titleMatch = rTitle === tTitle || rTitle.includes(tTitle) || tTitle.includes(rTitle);
-             if (!titleMatch) return false;
-
-             // 2. Artist matching
-             const artistMatch = 
-                 rArtist === tArtist || 
-                 rArtist.includes(tArtist) || 
-                 tArtist.includes(rArtist) ||
-                 rArtist.split(',')[0].trim() === tArtist.split(',')[0].trim();
-
-             if (!artistMatch) return false;
-
-             // 3. Date check
              if (recent.date && recent.date.uts) {
                  const trackTime = parseInt(recent.date.uts);
                  if (trackTime < from) return false;
@@ -217,38 +199,83 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
              } else if (recent['@attr']?.nowplaying === 'true') {
                  if (!isToday) return false;
              }
-
              return true;
           });
-
-          if (foundTracks.length < totalMinPlayCount) {
-             totalMinPlayCount = foundTracks.length;
+          
+          if (validRecentTracks.length > 0) {
+              totalMinPlayCount = 1;
+              validRecentTracks.forEach(ft => contributingAccounts.add(ft.listenedBy));
+              combinedMatches['weekend-bonus'] = `Played ${validRecentTracks[0].name} (${validRecentTracks[0].listenedBy})`;
+          } else {
+              totalMinPlayCount = 0;
           }
+      } else {
+          tracks.forEach(target => {
+              const tArtist = target.artist.toLowerCase();
+              const tTitle = target.title.toLowerCase();
 
-          foundTracks.forEach(ft => contributingAccounts.add(ft.listenedBy));
-          const foundTrack = foundTracks[0];
+              const foundTracks = recentTracks.filter(recent => {
+                 // Only count if from an available account
+                 if (!accountsToUse.includes(recent.listenedBy)) return false;
 
-          if (foundTrack) {
-             let timeDisplay = 'Just now';
-             if (foundTrack.date && foundTrack.date.uts) {
-                 const dateObj = new Date(parseInt(foundTrack.date.uts) * 1000);
-                 timeDisplay = dateObj.toLocaleString('id-ID', {
-                   timeZone: 'Asia/Jakarta',
-                   day: 'numeric',
-                   month: 'short',
-                   hour: '2-digit',
-                   minute: '2-digit'
-                 });
-             } else if (foundTrack.date) {
-                 timeDisplay = foundTrack.date['#text'];
-             } else if (foundTrack['@attr']?.nowplaying === 'true') {
-                 timeDisplay = 'Listening Now...';
-             }
-             combinedMatches[target.id] = `${timeDisplay} (${foundTrack.listenedBy})`;
-          }
-      });
+                 const rArtist = recent.artist['#text'].toLowerCase().trim();
+                 const rTitle = recent.name.toLowerCase().trim();
+                 
+                 // 1. Title matching
+                 const titleMatch = rTitle === tTitle || rTitle.includes(tTitle) || tTitle.includes(rTitle);
+                 if (!titleMatch) return false;
 
-      if (tracks.length === 0) totalMinPlayCount = 0;
+                 // 2. Artist matching
+                 const artistMatch = 
+                     rArtist === tArtist || 
+                     rArtist.includes(tArtist) || 
+                     tArtist.includes(rArtist) ||
+                     rArtist.split(',')[0].trim() === tArtist.split(',')[0].trim();
+
+                 if (!artistMatch) return false;
+
+                 // 3. Date check
+                 if (recent.date && recent.date.uts) {
+                     const trackTime = parseInt(recent.date.uts);
+                     if (trackTime < from) return false;
+                     if (to && trackTime > to) return false;
+                 } else if (recent['@attr']?.nowplaying === 'true') {
+                     if (!isToday) return false;
+                 }
+
+                 return true;
+              });
+
+              if (foundTracks.length < totalMinPlayCount) {
+                 totalMinPlayCount = foundTracks.length;
+              }
+
+              foundTracks.forEach(ft => contributingAccounts.add(ft.listenedBy));
+              const foundTrack = foundTracks[0];
+
+              if (foundTrack) {
+                 let timeDisplay = 'Just now';
+                 if (foundTrack.date && foundTrack.date.uts) {
+                     const dateObj = new Date(parseInt(foundTrack.date.uts) * 1000);
+                     timeDisplay = dateObj.toLocaleString('id-ID', {
+                       timeZone: 'Asia/Jakarta',
+                       day: 'numeric',
+                       month: 'short',
+                       hour: '2-digit',
+                       minute: '2-digit'
+                     });
+                 } else if (foundTrack.date) {
+                     timeDisplay = foundTrack.date['#text'];
+                 } else if (foundTrack['@attr']?.nowplaying === 'true') {
+                     timeDisplay = 'Listening Now...';
+                 }
+                 combinedMatches[target.id] = `${timeDisplay} (${foundTrack.listenedBy})`;
+              }
+          });
+          
+          if (tracks.length === 0) totalMinPlayCount = 0;
+      }
+      
       if (totalMinPlayCount === Infinity) totalMinPlayCount = 0;
       
       const winningUsernames = Array.from(contributingAccounts);
@@ -409,7 +436,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   };
 
   const progress = calculateProgress();
-  const isComplete = progress === 100 && tracks.length > 0;
+  const isComplete = (progress === 100 && tracks.length > 0) || (isWeekendVal && tracks.length === 0 && syncPlayCount > 0);
 
   const renderButton = () => {
     if (hasCheckedInSelectedDate && pointsToClaim <= 0) {

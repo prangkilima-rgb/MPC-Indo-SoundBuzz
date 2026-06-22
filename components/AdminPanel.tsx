@@ -329,13 +329,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     for (let i = 1; i <= diffToMonday; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
+      
+      const dayIndex = date.getDay();
+      if (dayIndex === 0 || dayIndex === 6) continue; // Skip weekend for debt calculation
+      
       const possibleDates = [
         date.toLocaleDateString(),
         date.toLocaleDateString('en-US'),
         date.toLocaleDateString('en-GB'),
         date.toLocaleDateString('id-ID')
       ];
-      const dayIndex = date.getDay();
       
       const dayConfig = schedule[dayIndex];
       const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
