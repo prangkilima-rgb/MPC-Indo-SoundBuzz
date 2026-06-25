@@ -23,18 +23,26 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
 
   const datesToCheck: { dateStr: string; dayIndex: number; hasTracks: boolean; isPast: boolean; possibleDates: string[]; dateObj: Date }[] = [];
   const today = new Date();
-  today.setHours(0,0,0,0);
+  today.setHours(12,0,0,0);
 
   if (reportType === 'daily') {
-    const d = new Date(selectedDay);
-    d.setHours(0,0,0,0);
+    let d = new Date();
+    if (selectedDay) {
+      const parts = selectedDay.split('-');
+      if (parts.length === 3) {
+        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+      }
+    }
     
     const dateStr = d.toLocaleDateString();
     const possibleDates = [
         d.toLocaleDateString(),
         d.toLocaleDateString('en-US'),
         d.toLocaleDateString('en-GB'),
-        d.toLocaleDateString('id-ID')
+        d.toLocaleDateString('id-ID'),
+        d.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
+        d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
+        d.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
     ];
 
     const dayIndex = d.getDay();
@@ -44,8 +52,13 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
 
     datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast, possibleDates, dateObj: d });
   } else if (reportType === 'weekly') {
-    const dDate = new Date(selectedWeekEnd);
-    dDate.setHours(0,0,0,0);
+    let dDate = new Date();
+    if (selectedWeekEnd) {
+      const parts = selectedWeekEnd.split('-');
+      if (parts.length === 3) {
+        dDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+      }
+    }
     
     // Find Monday of the selected week
     const currentDay = dDate.getDay();
@@ -63,7 +76,10 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
             d.toLocaleDateString(),
             d.toLocaleDateString('en-US'),
             d.toLocaleDateString('en-GB'),
-            d.toLocaleDateString('id-ID')
+            d.toLocaleDateString('id-ID'),
+            d.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
+            d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
+            d.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
         ];
 
         const dayIndex = d.getDay();
@@ -83,14 +99,17 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     for (let i = 1; i <= daysInMonth; i++) {
-        const d = new Date(year, month, i);
+        const d = new Date(year, month, i, 12, 0, 0);
         
         const dateStr = d.toLocaleDateString();
         const possibleDates = [
             d.toLocaleDateString(),
             d.toLocaleDateString('en-US'),
             d.toLocaleDateString('en-GB'),
-            d.toLocaleDateString('id-ID')
+            d.toLocaleDateString('id-ID'),
+            d.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
+            d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
+            d.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
         ];
 
         const dayIndex = d.getDay();

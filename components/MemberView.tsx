@@ -47,7 +47,24 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const [editWhatsappNumber, setEditWhatsappNumber] = useState('');
 
   // Day Selection State
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(12, 0, 0, 0);
+    return d;
+  });
+
+  const isDateCheckedIn = (date: Date) => {
+    const possibleDates = [
+        date.toLocaleDateString(),
+        date.toLocaleDateString('en-US'),
+        date.toLocaleDateString('en-GB'),
+        date.toLocaleDateString('id-ID'),
+        date.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
+        date.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
+        date.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
+    ];
+    return possibleDates.some(pd => currentUser.checkInHistory?.includes(pd));
+  };
 
   // Derive tracks and spotifyId from weeklySchedule and selectedDate
   const dayIndex = selectedDate.getDay();
@@ -57,12 +74,12 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
 
   // Calculate Check-in status dynamically
   const selectedDateStr = selectedDate.toLocaleDateString();
-  const hasCheckedInSelectedDate = currentUser.checkInHistory?.includes(selectedDateStr) || false;
+  const hasCheckedInSelectedDate = isDateCheckedIn(selectedDate);
 
   const realToday = new Date();
-  realToday.setHours(0,0,0,0);
+  realToday.setHours(12,0,0,0);
   const compareDateVal = new Date(selectedDate);
-  compareDateVal.setHours(0,0,0,0);
+  compareDateVal.setHours(12,0,0,0);
   
   const isPastDate = compareDateVal.getTime() < realToday.getTime();
   const currentDayOfWeekVal = new Date().getDay();
@@ -496,15 +513,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     return days;
   };
 
-  const isDateCheckedIn = (date: Date) => {
-    const possibleDates = [
-        date.toLocaleDateString(),
-        date.toLocaleDateString('en-US'),
-        date.toLocaleDateString('en-GB'),
-        date.toLocaleDateString('id-ID')
-    ];
-    return possibleDates.some(pd => currentUser.checkInHistory?.includes(pd));
-  };
   
   return (
     <div className="w-full max-w-md mx-auto p-4 flex flex-col items-center">
@@ -557,16 +565,22 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             max={new Date().toISOString().split('T')[0]} // Cannot select future dates natively via max attribute (using UTC as approx is close enough, or precise local below)
             value={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`}
             onChange={(e) => {
-              const d = new Date(e.target.value);
-              // Avoid invalid dates
-              if (!isNaN(d.getTime())) {
-                const today = new Date();
-                today.setHours(0,0,0,0);
-                d.setHours(0,0,0,0);
-                if (d <= today) {
-                  setSelectedDate(d);
-                  setMatchedStatus({});
-                  setSynced(false);
+              if (e.target.value) {
+                const parts = e.target.value.split("-");
+                if (parts.length === 3) {
+                  const y = parseInt(parts[0]);
+                  const m = parseInt(parts[1]) - 1;
+                  const dVal = parseInt(parts[2]);
+                  const d = new Date(y, m, dVal, 12, 0, 0);
+                  if (!isNaN(d.getTime())) {
+                    const today = new Date();
+                    today.setHours(12,0,0,0);
+                    if (d.getTime() <= today.getTime() + 12*60*60*1000) {
+                      setSelectedDate(d);
+                      setMatchedStatus({});
+                      setSynced(false);
+                    }
+                  }
                 }
               }
             }}

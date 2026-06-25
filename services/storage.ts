@@ -6,6 +6,66 @@ import { handleFirestoreError, OperationType } from './firestore-errors';
 
 // --- CLOUD STORAGE SERVICE (Firebase Firestore Adapter) ---
 
+export function getPossibleDateStrings(dateString: string): string[] {
+  let date: Date | null = null;
+  
+  if (dateString.includes('-')) {
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+    }
+  } else if (dateString.includes('/')) {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const p0 = parseInt(parts[0]);
+      const p1 = parseInt(parts[1]);
+      const p2 = parseInt(parts[2]);
+      
+      const datesToTry = [];
+      if (p0 <= 12) {
+        datesToTry.push(new Date(p2, p0 - 1, p1, 12, 0, 0)); // M/D/YYYY
+      }
+      if (p1 <= 12 && p0 !== p1) {
+        datesToTry.push(new Date(p2, p1 - 1, p0, 12, 0, 0)); // D/M/YYYY
+      }
+      
+      const results: string[] = [];
+      datesToTry.forEach(d => {
+        if (!isNaN(d.getTime())) {
+          results.push(
+            d.toLocaleDateString(),
+            d.toLocaleDateString('en-US'),
+            d.toLocaleDateString('en-GB'),
+            d.toLocaleDateString('id-ID'),
+            d.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
+            d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
+            d.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
+          );
+        }
+      });
+      return Array.from(new Set(results));
+    }
+  }
+  
+  if (!date) {
+    date = new Date(dateString);
+  }
+  
+  if (isNaN(date.getTime())) {
+    return [dateString];
+  }
+  
+  return Array.from(new Set([
+    date.toLocaleDateString(),
+    date.toLocaleDateString('en-US'),
+    date.toLocaleDateString('en-GB'),
+    date.toLocaleDateString('id-ID'),
+    date.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
+    date.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
+    date.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
+  ]));
+}
+
 export const storageService = {
   
   // --- CONFIGURATION ---
@@ -238,8 +298,15 @@ export const storageService = {
   async isLastFmAccountUsed(dateString: string, username: string): Promise<boolean> {
       if (!username) return false;
       const data = await this._fetchFullData();
-      const usedToday = data.dailyUsedLastFmAccounts?.[dateString] || [];
-      return usedToday.includes(username);
+      const possibleKeys = getPossibleDateStrings(dateString);
+      const dailyUsedMap = data.dailyUsedLastFmAccounts || {};
+      for (const key of possibleKeys) {
+          const usedToday = dailyUsedMap[key] || [];
+          if (usedToday.includes(username)) {
+              return true;
+          }
+      }
+      return false;
   },
 
   // NEW: Method to update user profile (Last.fm, Password, etc.)
