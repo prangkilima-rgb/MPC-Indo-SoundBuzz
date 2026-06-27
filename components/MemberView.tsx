@@ -93,43 +93,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     return Math.round((matchedCount / tracks.length) * 100);
   };
 
-  const calculateDebt = () => {
-    let debtCount = 0;
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    
-    // Check the last 30 days to accumulate debt from previous weeks
-    for (let i = 1; i <= 30; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      
-      const checkDayIndex = date.getDay();
-      if (checkDayIndex === 0 || checkDayIndex === 6) continue; // Skip weekend for debt calculation
-      
-      const possibleDates = [
-        date.toLocaleDateString(),
-        date.toLocaleDateString('en-US'),
-        date.toLocaleDateString('en-GB'),
-        date.toLocaleDateString('id-ID'),
-        date.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
-        date.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
-        date.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
-      ];
-      const dayConfig = weeklySchedule[checkDayIndex];
-      const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
-      
-      let isCheckedIn = false;
-      if (currentUser.checkInHistory) {
-         isCheckedIn = possibleDates.some(pd => currentUser.checkInHistory!.includes(pd));
-      }
-      
-      if (hasTracks && !isCheckedIn) {
-        debtCount++;
-      }
-    }
-    return debtCount; // Uncapped to let previous weeks accumulate
-  };
-
   const handleSync = async () => {
     if (!currentUser.lastFmUsername) {
       setError('No Last.fm username found in profile.');
@@ -325,8 +288,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     if (!hasCheckedInSelectedDate) {
       await onCheckIn(selectedDateStr, winningAccount); 
       
-      // If weekend and no debt, this check-in acts as a tabungan point as well
-      if (isWeekendVal && calculateDebt() === 0 && selectedDateStr === new Date().toLocaleDateString()) {
+      // If weekend, this check-in acts as a tabungan point as well
+      if (isWeekendVal && selectedDate.toDateString() === new Date().toDateString()) {
          totalPointsEarned += 1;
       }
     }
