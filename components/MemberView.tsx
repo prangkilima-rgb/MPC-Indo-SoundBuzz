@@ -110,7 +110,10 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         date.toLocaleDateString(),
         date.toLocaleDateString('en-US'),
         date.toLocaleDateString('en-GB'),
-        date.toLocaleDateString('id-ID')
+        date.toLocaleDateString('id-ID'),
+        date.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
+        date.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
+        date.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
       ];
       const dayConfig = weeklySchedule[checkDayIndex];
       const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
