@@ -438,7 +438,9 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
           className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-500 bg-gradient-to-r from-neon-purple to-pink-600 text-white shadow-[0_0_30px_rgba(176,38,255,0.6)] scale-100 hover:scale-[1.02] cursor-pointer"
         >
           <Trophy size={24} className="text-yellow-300" />
-          {pointsToClaim > 0 && hasCheckedInSelectedDate ? `CLAIM ${pointsToClaim} EXTRA SAVINGS POINTS` : 'CLAIM CHECK-IN'}
+          {pointsToClaim > 0 && hasCheckedInSelectedDate 
+            ? `CLAIM ${pointsToClaim} EXTRA SAVINGS POINTS` 
+            : (isWeekendVal && selectedDate.toDateString() === new Date().toDateString() ? 'CLAIM POINT SAVING' : 'CLAIM CHECK-IN')}
         </button>
       );
     }
