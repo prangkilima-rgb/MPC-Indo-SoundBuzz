@@ -54,6 +54,13 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   });
 
   const isDateCheckedIn = (date: Date) => {
+    const y = date.getFullYear();
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    
+    const mPad = String(m).padStart(2, '0');
+    const dPad = String(d).padStart(2, '0');
+
     const possibleDates = [
         date.toLocaleDateString(),
         date.toLocaleDateString('en-US'),
@@ -61,7 +68,17 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         date.toLocaleDateString('id-ID'),
         date.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
         date.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
-        date.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
+        date.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }),
+        `${m}/${d}/${y}`,
+        `${mPad}/${dPad}/${y}`,
+        `${d}/${m}/${y}`,
+        `${dPad}/${mPad}/${y}`,
+        `${y}-${mPad}-${dPad}`,
+        `${y}-${m}-${d}`,
+        `${m}-${d}-${y}`,
+        `${mPad}-${dPad}-${y}`,
+        `${d}-${m}-${y}`,
+        `${dPad}-${mPad}-${y}`
     ];
     return possibleDates.some(pd => currentUser.checkInHistory?.includes(pd));
   };

@@ -6,6 +6,36 @@ import { handleFirestoreError, OperationType } from './firestore-errors';
 
 // --- CLOUD STORAGE SERVICE (Firebase Firestore Adapter) ---
 
+export function generatePossibleDates(date: Date): string[] {
+    const y = date.getFullYear();
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    
+    const mPad = String(m).padStart(2, '0');
+    const dPad = String(d).padStart(2, '0');
+
+    const possibleDates = [
+        date.toLocaleDateString(),
+        date.toLocaleDateString('en-US'),
+        date.toLocaleDateString('en-GB'),
+        date.toLocaleDateString('id-ID'),
+        date.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
+        date.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
+        date.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }),
+        `${m}/${d}/${y}`,
+        `${mPad}/${dPad}/${y}`,
+        `${d}/${m}/${y}`,
+        `${dPad}/${mPad}/${y}`,
+        `${y}-${mPad}-${dPad}`,
+        `${y}-${m}-${d}`,
+        `${m}-${d}-${y}`,
+        `${mPad}-${dPad}-${y}`,
+        `${d}-${m}-${y}`,
+        `${dPad}-${mPad}-${y}`
+    ];
+    return Array.from(new Set(possibleDates));
+}
+
 export function getPossibleDateStrings(dateString: string): string[] {
   let date: Date | null = null;
   

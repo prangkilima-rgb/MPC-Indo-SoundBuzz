@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, WeeklySchedule } from '../types';
 import { Calendar, Search, CalendarDays } from 'lucide-react';
+import { generatePossibleDates } from '../services/storage';
 
 interface AdminReportViewProps {
   users: User[];
@@ -35,15 +36,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
     }
     
     const dateStr = d.toLocaleDateString();
-    const possibleDates = [
-        d.toLocaleDateString(),
-        d.toLocaleDateString('en-US'),
-        d.toLocaleDateString('en-GB'),
-        d.toLocaleDateString('id-ID'),
-        d.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
-        d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
-        d.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
-    ];
+    const possibleDates = generatePossibleDates(d);
 
     const dayIndex = d.getDay();
     const dayConfig = schedule[dayIndex];
@@ -72,15 +65,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
         d.setDate(monday.getDate() + i);
         
         const dateStr = d.toLocaleDateString();
-        const possibleDates = [
-            d.toLocaleDateString(),
-            d.toLocaleDateString('en-US'),
-            d.toLocaleDateString('en-GB'),
-            d.toLocaleDateString('id-ID'),
-            d.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
-            d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
-            d.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
-        ];
+        const possibleDates = generatePossibleDates(d);
 
         const dayIndex = d.getDay();
         const dayConfig = schedule[dayIndex];
@@ -102,15 +87,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
         const d = new Date(year, month, i, 12, 0, 0);
         
         const dateStr = d.toLocaleDateString();
-        const possibleDates = [
-            d.toLocaleDateString(),
-            d.toLocaleDateString('en-US'),
-            d.toLocaleDateString('en-GB'),
-            d.toLocaleDateString('id-ID'),
-            d.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
-            d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
-            d.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
-        ];
+        const possibleDates = generatePossibleDates(d);
 
         const dayIndex = d.getDay();
         const dayConfig = schedule[dayIndex];
