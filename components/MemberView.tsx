@@ -55,32 +55,10 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
 
   const isDateCheckedIn = (date: Date) => {
     const y = date.getFullYear();
-    const m = date.getMonth() + 1;
-    const d = date.getDate();
-    
-    const mPad = String(m).padStart(2, '0');
-    const dPad = String(d).padStart(2, '0');
-
-    const possibleDates = [
-        date.toLocaleDateString(),
-        date.toLocaleDateString('en-US'),
-        date.toLocaleDateString('en-GB'),
-        date.toLocaleDateString('id-ID'),
-        date.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
-        date.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
-        date.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }),
-        `${m}/${d}/${y}`,
-        `${mPad}/${dPad}/${y}`,
-        `${d}/${m}/${y}`,
-        `${dPad}/${mPad}/${y}`,
-        `${y}-${mPad}-${dPad}`,
-        `${y}-${m}-${d}`,
-        `${m}-${d}-${y}`,
-        `${mPad}-${dPad}-${y}`,
-        `${d}-${m}-${y}`,
-        `${dPad}-${mPad}-${y}`
-    ];
-    return possibleDates.some(pd => currentUser.checkInHistory?.includes(pd));
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const isoString = `${y}-${m}-${d}`;
+    return currentUser.checkInHistory?.includes(isoString);
   };
 
   // Derive tracks and spotifyId from weeklySchedule and selectedDate
@@ -90,7 +68,10 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const spotifyId = dayConfig.spotifyId || DEFAULT_SPOTIFY_ID;
 
   // Calculate Check-in status dynamically
-  const selectedDateStr = selectedDate.toLocaleDateString();
+  const ySel = selectedDate.getFullYear();
+  const mSel = String(selectedDate.getMonth() + 1).padStart(2, '0');
+  const dSel = String(selectedDate.getDate()).padStart(2, '0');
+  const selectedDateStr = `${ySel}-${mSel}-${dSel}`;
   const hasCheckedInSelectedDate = isDateCheckedIn(selectedDate);
 
   const realToday = new Date();
@@ -649,7 +630,13 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
               </button>
               
               {!hasCheckedInSelectedDate && 
-               selectedDateStr !== new Date().toLocaleDateString() && 
+               selectedDateStr !== (() => {
+                 const t = new Date();
+                 const y = t.getFullYear();
+                 const m = String(t.getMonth() + 1).padStart(2, '0');
+                 const d = String(t.getDate()).padStart(2, '0');
+                 return `${y}-${m}-${d}`;
+               })() && 
                (currentUser.extraPointsBalance || 0) > 0 && (
                 <button 
                   onClick={handlePatchAbsence}

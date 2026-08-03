@@ -8,92 +8,14 @@ import { handleFirestoreError, OperationType } from './firestore-errors';
 
 export function generatePossibleDates(date: Date): string[] {
     const y = date.getFullYear();
-    const m = date.getMonth() + 1;
-    const d = date.getDate();
-    
-    const mPad = String(m).padStart(2, '0');
-    const dPad = String(d).padStart(2, '0');
-
-    const possibleDates = [
-        date.toLocaleDateString(),
-        date.toLocaleDateString('en-US'),
-        date.toLocaleDateString('en-GB'),
-        date.toLocaleDateString('id-ID'),
-        date.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
-        date.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
-        date.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }),
-        `${m}/${d}/${y}`,
-        `${mPad}/${dPad}/${y}`,
-        `${d}/${m}/${y}`,
-        `${dPad}/${mPad}/${y}`,
-        `${y}-${mPad}-${dPad}`,
-        `${y}-${m}-${d}`,
-        `${m}-${d}-${y}`,
-        `${mPad}-${dPad}-${y}`,
-        `${d}-${m}-${y}`,
-        `${dPad}-${mPad}-${y}`
-    ];
-    return Array.from(new Set(possibleDates));
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return [`${y}-${m}-${d}`];
 }
 
 export function getPossibleDateStrings(dateString: string): string[] {
-  let date: Date | null = null;
-  
-  if (dateString.includes('-')) {
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
-    }
-  } else if (dateString.includes('/')) {
-    const parts = dateString.split('/');
-    if (parts.length === 3) {
-      const p0 = parseInt(parts[0]);
-      const p1 = parseInt(parts[1]);
-      const p2 = parseInt(parts[2]);
-      
-      const datesToTry = [];
-      if (p0 <= 12) {
-        datesToTry.push(new Date(p2, p0 - 1, p1, 12, 0, 0)); // M/D/YYYY
-      }
-      if (p1 <= 12 && p0 !== p1) {
-        datesToTry.push(new Date(p2, p1 - 1, p0, 12, 0, 0)); // D/M/YYYY
-      }
-      
-      const results: string[] = [];
-      datesToTry.forEach(d => {
-        if (!isNaN(d.getTime())) {
-          results.push(
-            d.toLocaleDateString(),
-            d.toLocaleDateString('en-US'),
-            d.toLocaleDateString('en-GB'),
-            d.toLocaleDateString('id-ID'),
-            d.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
-            d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
-            d.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
-          );
-        }
-      });
-      return Array.from(new Set(results));
-    }
-  }
-  
-  if (!date) {
-    date = new Date(dateString);
-  }
-  
-  if (isNaN(date.getTime())) {
-    return [dateString];
-  }
-  
-  return Array.from(new Set([
-    date.toLocaleDateString(),
-    date.toLocaleDateString('en-US'),
-    date.toLocaleDateString('en-GB'),
-    date.toLocaleDateString('id-ID'),
-    date.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta' }),
-    date.toLocaleDateString('en-GB', { timeZone: 'Asia/Jakarta' }),
-    date.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })
-  ]));
+  // Since we migrated everything to YYYY-MM-DD, just return the string.
+  return [dateString];
 }
 
 export const storageService = {
@@ -310,7 +232,11 @@ export const storageService = {
           history.push(dateString);
         }
         // If checking in for today, update lastCheckInDate as well for backward compatibility
-        const todayStr = new Date().toLocaleDateString();
+        const t = new Date();
+        const tY = t.getFullYear();
+        const tM = String(t.getMonth() + 1).padStart(2, '0');
+        const tD = String(t.getDate()).padStart(2, '0');
+        const todayStr = `${tY}-${tM}-${tD}`;
         const newLastCheckIn = dateString === todayStr ? dateString : u.lastCheckInDate;
         
         updatedUser = { ...u, lastCheckInDate: newLastCheckIn, checkInHistory: history };

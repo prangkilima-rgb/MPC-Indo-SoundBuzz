@@ -1,24 +1,27 @@
-const { initializeApp, cert } = require('firebase-admin/app');
-const { getFirestore } = require('firebase-admin/firestore');
-const fs = require('fs');
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import fs from 'fs';
 
-const serviceAccount = JSON.parse(fs.readFileSync('firebase-service-account.json', 'utf8'));
-
-initializeApp({
-  credential: cert(serviceAccount)
-});
-
-const db = getFirestore();
+const config = JSON.parse(fs.readFileSync('firebase-applet-config.json', 'utf8'));
+const app = initializeApp(config);
+const db = config.firestoreDatabaseId ? getFirestore(app, config.firestoreDatabaseId) : getFirestore(app);
 
 async function run() {
-  const snapshot = await db.collection('users').where('email', '==', 'prangkilima@gmail.com').get();
-  if (snapshot.empty) {
-    console.log('No user found.');
-    return;
-  }
-  snapshot.forEach(doc => {
+  const q = collection(db, "appData");
+  const querySnapshot = await getDocs(q);
+  querySnapshot.forEach((doc) => {
     const data = doc.data();
-    console.log(JSON.stringify(data.checkInHistory, null, 2));
+    if (data.users) {
+        const user = data.users.find(u => u.appUsername === 'alsukorejoi');
+        if (user) {
+            console.log("Checkin history for alsukorejoi:");
+            console.log(user.checkInHistory);
+        }
+    }
   });
+  process.exit(0);
 }
-run().catch(console.error);
+run().catch(e => {
+  console.error(e);
+  process.exit(1);
+});

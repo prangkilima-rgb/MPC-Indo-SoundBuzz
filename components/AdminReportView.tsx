@@ -124,7 +124,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
           completedCount++;
         } else if (d.isPast) { // Only count as debt if it's in the past
            debtDates.push(d.dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }));
-        } else if (d.possibleDates.includes(today.toLocaleDateString())) {
+        } else if (d.possibleDates.includes(generatePossibleDates(today)[0])) {
            // If it's today, it's missing if not checked in
            debtDates.push(d.dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }));
         }
