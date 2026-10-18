@@ -253,15 +253,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       }
   };
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
     try {
-      const data = storageService.exportData();
+      setSettingsMsg('Generating live backup...');
+      const data = await storageService.exportData();
       const backupData = {
         version: 2,
         timestamp: new Date().toISOString(),
-        users: data.users ? JSON.parse(data.users) : [],
-        schedule: data.schedule ? JSON.parse(data.schedule) : {},
-        adminPin: data.adminPin || null
+        users: data.users || [],
+        schedule: data.weeklySchedule || {},
+        adminPin: data.adminPin || null,
+        tracks: data.tracks || [],
+        dailyUsedLastFmAccounts: data.dailyUsedLastFmAccounts || {}
       };
       const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -288,9 +291,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         if (window.confirm('WARNING: This will overwrite ALL data (including Admin PIN). Continue?')) {
             await storageService.importData(
               json.users ? JSON.stringify(json.users) : null,
-              null, // Legacy tracks ignored
+              json.tracks ? JSON.stringify(json.tracks) : null,
               json.schedule ? JSON.stringify(json.schedule) : null,
-              json.adminPin || null
+              json.adminPin || null,
+              json.dailyUsedLastFmAccounts ? JSON.stringify(json.dailyUsedLastFmAccounts) : null
             );
             alert('Data restored successfully. Reloading...');
             window.location.reload();

@@ -376,25 +376,22 @@ export const storageService = {
 
   // --- BACKUP UTILS ---
   
-  exportData() {
-    return {
-      users: localStorage.getItem(STORAGE_KEY_USERS),
-      tracks: localStorage.getItem(STORAGE_KEY),
-      spotify: localStorage.getItem(STORAGE_KEY_SPOTIFY),
-      schedule: localStorage.getItem('streamguard_schedule'),
-      adminPin: localStorage.getItem('streamguard_admin_pin')
-    };
+  async exportData(): Promise<AppData> {
+    return await this._fetchFullData();
   },
 
-  async importData(usersJson: string | null, tracksJson: string | null, scheduleJson: string | null, pinJson: string | null) {
+  async importData(usersJson: string | null, tracksJson: string | null, scheduleJson: string | null, pinJson: string | null, dailyUsedJson?: string | null) {
+    const existing = await this._fetchFullData();
     const data: AppData = {
-      users: usersJson ? JSON.parse(usersJson) : [],
-      tracks: tracksJson ? JSON.parse(tracksJson) : DEFAULT_TRACKS,
-      spotifyPlaylistId: DEFAULT_SPOTIFY_ID,
-      weeklySchedule: scheduleJson ? JSON.parse(scheduleJson) : {},
-      adminPin: pinJson || ADMIN_PIN
+      ...existing,
+      users: usersJson ? JSON.parse(usersJson) : existing.users,
+      tracks: tracksJson ? JSON.parse(tracksJson) : (existing.tracks || DEFAULT_TRACKS),
+      spotifyPlaylistId: existing.spotifyPlaylistId || DEFAULT_SPOTIFY_ID,
+      weeklySchedule: scheduleJson ? JSON.parse(scheduleJson) : existing.weeklySchedule,
+      adminPin: pinJson || existing.adminPin || ADMIN_PIN,
+      dailyUsedLastFmAccounts: dailyUsedJson ? JSON.parse(dailyUsedJson) : existing.dailyUsedLastFmAccounts
     };
 
-    await this._saveFullData(data);
+    await this._runTransaction(() => data);
   }
 };

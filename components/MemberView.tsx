@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music, ExternalLink, Settings, Edit2, Save, Key, Lock, Link as LinkIcon, Headphones, Mic2, Eye, MessageCircle, Star, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music, ExternalLink, Settings, Edit2, Save, Key, Lock, Link as LinkIcon, Headphones, Mic2, Eye, MessageCircle, Star, Trash2, Sparkles } from 'lucide-react';
 import { TargetTrack, User, WeeklySchedule } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
 import { storageService } from '../services/storage';
@@ -84,6 +84,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const isWeekendVal = currentDayOfWeekVal === 0 || currentDayOfWeekVal === 6;
   const isHutangDay = isPastDate && tracks.length > 0 && !hasCheckedInSelectedDate;
   const isLockedHutang = isHutangDay && !isWeekendVal;
+  const isSettlingDebt = isHutangDay && isWeekendVal;
 
   const calculateProgress = () => {
     if (tracks.length === 0) return 0;
@@ -115,6 +116,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         to = Math.floor(endOfDay.getTime() / 1000);
       }
 
+      const todayStart = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
+
       // Use credentials from all linked Last.fm accounts for auto-detection
       const accountsToSync = currentUser.lastFmAccounts?.length 
         ? currentUser.lastFmAccounts 
@@ -123,14 +126,31 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       let allRecentTracks: any[] = [];
       
       try {
-        const fetchPromises = accountsToSync.map(account => {
-          if (!account.username) return Promise.resolve([]);
-          return fetchRecentTracks(
+        const fetchPromises = accountsToSync.map(async account => {
+          if (!account.username) return [];
+          const key = account.apiKey || currentUser.lastFmApiKey;
+          
+          // Fetch tracks for the selected date
+          const selectedDateTracks = await fetchRecentTracks(
             account.username,
-            account.apiKey || currentUser.lastFmApiKey,
+            key,
             from,
             to
-          ).then(tracks => tracks.map(t => ({...t, listenedBy: account.username})));
+          );
+          let combined = [...selectedDateTracks];
+
+          // If settling debt on the weekend, also fetch tracks played today (including now playing)
+          if (isSettlingDebt) {
+            const todayTracks = await fetchRecentTracks(
+              account.username,
+              key,
+              todayStart,
+              undefined
+            );
+            combined = [...combined, ...todayTracks];
+          }
+
+          return combined.map(t => ({ ...t, listenedBy: account.username }));
         });
         const results = await Promise.all(fetchPromises);
         allRecentTracks = results.flat();
@@ -215,10 +235,13 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                  // 3. Date check
                  if (recent.date && recent.date.uts) {
                      const trackTime = parseInt(recent.date.uts);
-                     if (trackTime < from) return false;
-                     if (to && trackTime > to) return false;
+                     const isFromSelectedDate = trackTime >= from && (!to || trackTime <= to);
+                     const isFromToday = trackTime >= todayStart;
+                     if (!isFromSelectedDate && !(isSettlingDebt && isFromToday)) {
+                         return false;
+                     }
                  } else if (recent['@attr']?.nowplaying === 'true') {
-                     if (!isToday) return false;
+                     if (!isToday && !isSettlingDebt) return false;
                  }
 
                  return true;
@@ -247,13 +270,42 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                  } else if (foundTrack['@attr']?.nowplaying === 'true') {
                      timeDisplay = 'Listening Now...';
                  }
-                 combinedMatches[target.id] = `${timeDisplay} (${foundTrack.listenedBy})`;
+
+                 const isPelunasan = isSettlingDebt && (
+                   foundTrack['@attr']?.nowplaying === 'true' || 
+                   (foundTrack.date?.uts && parseInt(foundTrack.date.uts) >= todayStart)
+                 );
+
+                 combinedMatches[target.id] = `${timeDisplay}${isPelunasan ? ' (Pelunasan)' : ''} (${foundTrack.listenedBy})`;
               }
           });
           
           if (tracks.length === 0) totalMinPlayCount = 0;
       }
       
+      const isWeekendToday = isWeekendVal && isToday;
+      if (isWeekendToday) {
+          // If on the weekend today, check if any target tracks matched OR any track was played today
+          const hasMatchedTracks = Object.keys(combinedMatches).length > 0;
+          if (hasMatchedTracks && (totalMinPlayCount === 0 || totalMinPlayCount === Infinity)) {
+              totalMinPlayCount = 1;
+          } else if (!hasMatchedTracks) {
+              const anyWeekendTrack = recentTracks.find(recent => {
+                 if (!accountsToUse.includes(recent.listenedBy)) return false;
+                 if (recent.date && recent.date.uts) {
+                     const trackTime = parseInt(recent.date.uts);
+                     return trackTime >= todayStart;
+                 }
+                 return recent['@attr']?.nowplaying === 'true';
+              });
+              if (anyWeekendTrack) {
+                  totalMinPlayCount = 1;
+                  contributingAccounts.add(anyWeekendTrack.listenedBy);
+                  combinedMatches['weekend-bonus'] = `Played ${anyWeekendTrack.name} (${anyWeekendTrack.listenedBy})`;
+              }
+          }
+      }
+
       if (totalMinPlayCount === Infinity) totalMinPlayCount = 0;
       
       const winningUsernames = Array.from(contributingAccounts);
@@ -414,7 +466,9 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   };
 
   const progress = calculateProgress();
-  const isComplete = (progress === 100 && tracks.length > 0) || (isWeekendVal && tracks.length === 0 && syncPlayCount > 0);
+  const isWeekendToday = isWeekendVal && selectedDate.toDateString() === new Date().toDateString();
+  const hasWeekendPlays = isWeekendToday && (syncPlayCount > 0 || Object.keys(matchedStatus).length > 0);
+  const isComplete = (progress === 100 && tracks.length > 0) || hasWeekendPlays;
 
   const renderButton = () => {
     if (hasCheckedInSelectedDate && pointsToClaim <= 0) {
@@ -438,7 +492,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
           <Trophy size={24} className="text-yellow-300" />
           {pointsToClaim > 0 && hasCheckedInSelectedDate 
             ? `CLAIM ${pointsToClaim} EXTRA SAVINGS POINTS` 
-            : (isWeekendVal && selectedDate.toDateString() === new Date().toDateString() ? 'CLAIM POINT SAVING' : 'CLAIM CHECK-IN')}
+            : (isWeekendToday ? 'CLAIM POINT SAVING' : 'CLAIM CHECK-IN')}
         </button>
       );
     }
@@ -471,7 +525,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     monday.setDate(date.getDate() + diffToMonday);
     
     const days = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 7; i++) {
         const d = new Date(monday);
         d.setDate(monday.getDate() + i);
         days.push(d);
@@ -525,10 +579,23 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
            <h3 className="text-white font-bold mb-1">Select Date</h3>
            <p className="text-xs text-gray-400">Select a date to view targets or clear absences.</p>
         </div>
-        <div className="relative w-full md:w-auto">
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={() => {
+              const today = new Date();
+              today.setHours(12, 0, 0, 0);
+              setSelectedDate(today);
+              setMatchedStatus({});
+              setSynced(false);
+            }}
+            className="px-3 py-3 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm"
+            title="Kembali ke Hari Ini"
+          >
+            Hari Ini
+          </button>
           <input 
             type="date"
-            max={new Date().toISOString().split('T')[0]} // Cannot select future dates natively via max attribute (using UTC as approx is close enough, or precise local below)
+            max={new Date().toISOString().split('T')[0]} // Cannot select future dates natively via max attribute
             value={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`}
             onChange={(e) => {
               if (e.target.value) {
@@ -555,12 +622,12 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         </div>
       </div>
 
-      {/* Weekly History (Mon-Fri) */}
+      {/* Weekly History (Mon-Sun) */}
       <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
         <h4 className="text-white font-bold mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
-            <CalendarCheck size={18} className="text-purple-400" /> Weekly Check-in (Mon-Fri)
+            <CalendarCheck size={18} className="text-purple-400" /> Weekly Check-in (Mon - Sun)
         </h4>
-        <div className="flex justify-between items-center bg-black/30 rounded-xl p-2 border border-white/5">
+        <div className="flex justify-between items-center bg-black/30 rounded-xl p-2 border border-white/5 overflow-x-auto">
             {getWeeklyHistoryForDate(selectedDate).map((day, index) => {
                 const checkedIn = isDateCheckedIn(day);
                 // Remove time part for future check
@@ -569,13 +636,14 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                 const compareDay = new Date(day);
                 compareDay.setHours(0,0,0,0);
                 const isFuture = compareDay.getTime() > today.getTime();
+                const isCurrentToday = compareDay.getTime() === today.getTime();
                 const dayName = day.toLocaleDateString('en-US', { weekday: 'short' });
                 const isSelected = compareDay.getTime() === selectedDate.getTime();
                 
                 return (
                     <div 
                         key={index} 
-                        className={`flex flex-col flex-1 items-center justify-center py-2 mx-1 rounded-lg transition-all cursor-pointer ${
+                        className={`flex flex-col flex-1 min-w-[40px] items-center justify-center py-2 mx-0.5 rounded-lg transition-all cursor-pointer relative ${
                             isSelected ? 'bg-white/10 ring-1 ring-white/30' : 'hover:bg-white/5'
                         }`}
                         onClick={() => {
@@ -586,6 +654,11 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                             }
                         }}
                     >
+                        {isCurrentToday && (
+                          <span className="text-[8px] font-extrabold text-neon-green tracking-tighter uppercase mb-0.5">
+                            Today
+                          </span>
+                        )}
                         <span className="text-[10px] text-gray-400 mb-1 uppercase tracking-wider font-bold">{dayName}</span>
                         {checkedIn ? (
                             <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center border border-green-500/30">
@@ -609,6 +682,18 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
 
       {/* Sync Button Only (No Inputs) */}
       <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
+        {isSettlingDebt && (
+            <div className="bg-blue-900/30 border border-blue-500/40 rounded-xl p-4 text-center mb-4">
+                <p className="text-blue-300 font-bold mb-1 flex items-center justify-center gap-2">
+                    <Sparkles size={16} className="text-yellow-400" /> Mode Pelunasan Hutang Absen (Akhir Pekan)
+                </p>
+                <p className="text-gray-300 text-xs leading-relaxed">
+                    Anda sedang memilih tanggal yang terlewat ({selectedDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}). 
+                    Putar lagu di target playlist hari ini di Spotify/Last.fm, lalu klik <strong>Check Streams</strong> di bawah untuk melunasi absen.
+                </p>
+            </div>
+        )}
+
         {isLockedHutang ? (
             <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-center">
                 <p className="text-red-400 font-bold mb-1">Fitur Pelunasan Terkunci</p>
